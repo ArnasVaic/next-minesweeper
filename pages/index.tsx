@@ -183,9 +183,9 @@ export default function Home() {
     return `${h}:${m}:${s}`
   }
 
-  const boardWidth = 10
-  const boardHeight = 10
-  const boardMines = 2
+  const boardWidth = 12
+  const boardHeight = 12
+  const boardMines = 30
 
   const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}))
   const [flags, setFlags] = useState<number>(boardMines)
@@ -226,7 +226,7 @@ export default function Home() {
         </div>
         <main className={`${montserrat.className} bg-gray-200 flex justify-center items-center flex-col flex-grow`}>
           <section 
-          className={`grid grid-cols-10 gap-0 bg-gray-200 rounded-xl shadow-lg opacity-90 ${(isWon || isLost) && 'blur-sm'}`} 
+          className={`grid grid-cols-12 gap-0 bg-gray-200 rounded-xl shadow-lg opacity-90 ${(isWon || isLost) && 'blur-sm'}`} 
           onContextMenu={(event) => event.preventDefault()}>
             {
               board.map((tile, index) => (
@@ -249,14 +249,12 @@ export default function Home() {
           <div className="font-bold pointer-events-none absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center text-4xl">
             {(isWon && 'You won!') || (isLost && 'You lost!')}
           </div>
-          <section className={`flex-row justify-between items-center relative w-96`}>
-            <div className="flex flex-col absolute left-0">
-              <div className="text-xl my-2"> ⏰ {displayTime(time)} </div>
-              <div className="text-xl my-2"> 🚩 {flags} </div>
-            </div>
-            <button onClick={startGame} className="text-white bg-orange-500 rounded-md px-4 py-2 my-4 absolute right-0">
-              New game
+          <section className={`flex flex-row justify-center items-center`}>
+            <div className="text-xl p-2 m-2 w-36 shadow-lg bg-slate-200 rounded-md">⏰ {displayTime(time)}</div>
+            <button className="text-white text-xl p-2 m-2 w-36 shadow-lg bg-orange-500 hover:bg-slate-200 hover:text-black rounded-md" onClick={startGame}>
+              New
             </button>
+            <div className="text-xl p-2 w-36 m-2 shadow-lg bg-slate-200 rounded-md">🚩 {flags}</div>
           </section>
         </main>
         <footer className="text-neutral-500 py-4 bg-gradient-to-t from-gray-300 to-gray-200 flex justify-center">
