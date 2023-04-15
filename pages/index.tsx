@@ -176,11 +176,10 @@ export default function Home() {
     setBoard(newBoard)
   }
 
-  function displayTime(start : Date) {
-    let now = new Date()
-    const h = (now.getHours() - start.getHours()).toString().padStart(2, '0')
-    const m = (now.getMinutes() - start.getMinutes()).toString().padStart(2, '0')
-    const s = (now.getSeconds() - start.getSeconds()).toString().padStart(2, '0')
+  function displayTime(time : Date) {
+    const h = time.getUTCHours().toString().padStart(2, '0')
+    const m = time.getUTCMinutes().toString().padStart(2, '0')
+    const s = time.getUTCSeconds().toString().padStart(2, '0')
     return `${h}:${m}:${s}`
   }
 
@@ -190,8 +189,7 @@ export default function Home() {
 
   const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}))
   const [flags, setFlags] = useState<number>(boardMines)
-  const [startTime, setStartTime] = useState(new Date())
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [time, setTime] = useState(new Date(0))
   const [isLost, setIsLost] = useState(false)
   const [isWon, setIsWon] = useState(false)
 
@@ -200,10 +198,16 @@ export default function Home() {
     setFlags(boardMines)
     setIsWon(false)
     setIsLost(false)
-    setStartTime(new Date())
+    setTime(new Date(0))
   }
 
   useEffect(() => {startGame()}, [])
+  useEffect(() => {
+    if(!isWon && !isLost) {
+      const timer = setInterval(() => {setTime((prevTime) => new Date(prevTime.getTime() + 1000))}, 1000)
+      return () => clearInterval(timer);
+    }
+  }, [isWon, isLost]);
 
   return (
     <>
@@ -247,7 +251,7 @@ export default function Home() {
           </div>
           <section className={`flex-row justify-between items-center relative w-96`}>
             <div className="flex flex-col absolute left-0">
-              <div className="text-xl my-2"> ⏰ {displayTime(startTime)} </div>
+              <div className="text-xl my-2"> ⏰ {displayTime(time)} </div>
               <div className="text-xl my-2"> 🚩 {flags} </div>
             </div>
             <button onClick={startGame} className="text-white bg-orange-500 rounded-md px-4 py-2 my-4 absolute right-0">
