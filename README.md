@@ -2,7 +2,7 @@
 
 ## Next-Minesweeper
 
-Next-Minesweeper is simple, styled minesweeper browser game, built using Next.js and React
+Next-Minesweeper is simple, styled minesweeper browser game, built using Next.js and React. Try it out [here](https://next-minesweeper-peach.vercel.app/)!
 
 ## Why Next.js and React?
 
