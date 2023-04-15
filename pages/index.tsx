@@ -11,7 +11,13 @@ export default function Home() {
     Covered,
     Flag,
     Revealed
-  }  
+  }
+
+  enum GameStatus {
+    Playing,
+    Won,
+    Lost
+  }
 
   interface Tile {
     value: number,
@@ -19,30 +25,34 @@ export default function Home() {
   }
 
   function countAdjacent(board : number[], index : number, width : number, height : number) : number {
-    let count = 0;
-    let x = index % width;
-    let y = Math.floor(index / width);
+    
+    let count = 0
+    let x = index % width
+    let y = Math.floor(index / width)
+
     let adjacent = [
       [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
       [x - 1, y], [x + 1, y],
       [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-    ];
+    ]
+
     adjacent.forEach(([x, y]) => {
       if (x >= 0 && x < width && y >= 0 && y < height) {
         if (board[x + y * width] === -1) {
-          count++;
+          count++
         }
       }
-    });
-    return count;
+    })
+
+    return count
   }
 
   function generateBoard(width : number, height : number, mines : number): Tile[] {
-    let board : number[] = Array(width * height).fill(0);
-    board.fill(-1, 0, mines);
-    board = shuffle(board);
-    board.forEach((value, index) => (value !== -1) && (board[index] = countAdjacent(board, index, width, height)));
-    return board.map((tile, _) => {return {value: tile, visibility: Visibility.Covered};});
+    let board : number[] = Array(width * height).fill(0)
+    board.fill(-1, 0, mines)
+    board = shuffle(board)
+    board.forEach((value, index) => (value !== -1) && (board[index] = countAdjacent(board, index, width, height)))
+    return board.map((tile, _) => {return {value: tile, visibility: Visibility.Covered}})
   }
 
   const textColorLookup : {[key: number]: string} = {
@@ -56,143 +66,143 @@ export default function Home() {
     "6": "text-pink-500",
     "7": "text-gray-500",
     "8": "text-black",
-  };
+  }
 
   const bgColorLookup : {[key : number]: string} = {
     [Visibility.Flag]: "bg-red-300",
     [Visibility.Revealed]: "bg-slate-100",
     [Visibility.Covered]: "bg-slate-200",
-  };
+  }
 
   const hoverBgColorLookup : {[key : number]: string} = {
     [Visibility.Flag]: "bg-red-300",
     [Visibility.Revealed]: "bg-slate-100",
     [Visibility.Covered]: "bg-slate-100",
-  };
+  }
 
   const displayTile = (tile: Tile) => {
     switch(tile.visibility) {
       case Visibility.Covered:
-        return '';
+        return ''
       case Visibility.Flag:
-        return "🚩";
+        return "🚩"
       case Visibility.Revealed:
-        return tile.value === -1 ? "💣" : (tile.value === 0 ? "" : tile.value);
+        return tile.value === -1 ? "💣" : (tile.value === 0 ? "" : tile.value)
     }
   }
 
   const revealUnflaggedMines = (board: Tile[]) => {
 
-    let newBoard = [...board];
+    let newBoard = [...board]
 
     newBoard.forEach((tile, _) => { 
       if(tile.value === -1 && tile.visibility !== Visibility.Flag)
-        tile.visibility = Visibility.Revealed; 
-    });
+        tile.visibility = Visibility.Revealed
+    })
 
-    setBoard(newBoard);
+    setBoard(newBoard)
   }
 
   const revealTile = (board: Tile[], index: number) => {
-    if (isWon || isLost) return;
+    if (isWon || isLost) return
 
-    const tile = board[index];
-    const value = tile.value;
-    const visibility = tile.visibility;
+    const tile = board[index]
+    const value = tile.value
+    const visibility = tile.visibility
 
-    if (visibility !== Visibility.Covered) return;
+    if (visibility !== Visibility.Covered) return
 
-    let newBoard = [...board];
-    newBoard[index].visibility = Visibility.Revealed;
-    setBoard(newBoard);
+    let newBoard = [...board]
+    newBoard[index].visibility = Visibility.Revealed
+    setBoard(newBoard)
 
     if (!isLost && !isWon && value === -1) 
     {
-      revealUnflaggedMines(board);
-      setIsLost(true);
-      console.log("You lose!");
-      return;
+      revealUnflaggedMines(board)
+      setIsLost(true)
+      console.log("You lose!")
+      return
     }
     else if (value === 0) 
     {
-      let [x, y] = [index % boardWidth, Math.floor(index / boardWidth)];
+      let [x, y] = [index % boardWidth, Math.floor(index / boardWidth)]
 
       let adjacent = [
         [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
         [x - 1, y], [x + 1, y],
         [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-      ];
+      ]
 
       adjacent.forEach(([x, y]) => {
         let inBounds = x >= 0 && x < boardWidth && y >= 0 && y < boardHeight;
         if (inBounds)
         {
-          let revealed = board[x + y * boardWidth].visibility === Visibility.Revealed;
+          let revealed = board[x + y * boardWidth].visibility === Visibility.Revealed
           if(!revealed)
-            revealTile(board, x + y * boardWidth);
+            revealTile(board, x + y * boardWidth)
         }
-      });
+      })
     }
 
-    console.log(board.filter((tile) => tile.visibility === Visibility.Covered).length);
+    console.log(board.filter((tile) => tile.visibility === Visibility.Covered).length)
     if(!isLost && !isWon && board.filter((tile) => tile.visibility !== Visibility.Revealed).length === boardMines)
     {
-      console.log("You win!");
-      setIsWon(true);
+      console.log("You win!")
+      setIsWon(true)
     } 
   }
 
   function toggleFlag(event: React.MouseEvent, tile: Tile, index: number) {
-    if (isWon || isLost) return;
+    if (isWon || isLost) return
 
-    event.preventDefault();
+    event.preventDefault()
 
     if(tile.visibility === Visibility.Revealed || isWon || isLost) return;
 
-    let newBoard = [...board];
+    let newBoard = [...board]
 
     if(newBoard[index].visibility === Visibility.Flag) {
       newBoard[index].visibility = Visibility.Covered;
-      setFlags(flags + 1);
+      setFlags(flags + 1)
     }
 
     else if(newBoard[index].visibility === Visibility.Covered) {
-      if(flags === 0) return;
+      if(flags === 0) return
       newBoard[index].visibility = Visibility.Flag;
-      setFlags(flags - 1);
+      setFlags(flags - 1)
     }
 
-    setBoard(newBoard);
+    setBoard(newBoard)
   }
 
   function displayTime(start : Date) {
-    let now = new Date();
-    const h = (now.getHours() - start.getHours()).toString().padStart(2, '0');
-    const m = (now.getMinutes() - start.getMinutes()).toString().padStart(2, '0');
-    const s = (now.getSeconds() - start.getSeconds()).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
+    let now = new Date()
+    const h = (now.getHours() - start.getHours()).toString().padStart(2, '0')
+    const m = (now.getMinutes() - start.getMinutes()).toString().padStart(2, '0')
+    const s = (now.getSeconds() - start.getSeconds()).toString().padStart(2, '0')
+    return `${h}:${m}:${s}`
   }
 
-  const boardWidth = 10;
-  const boardHeight = 10;
-  const boardMines = 2;
+  const boardWidth = 10
+  const boardHeight = 10
+  const boardMines = 2
 
-  const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}));
-  const [flags, setFlags] = useState<number>(boardMines);
-  const [startTime, setStartTime] = useState(new Date());
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isLost, setIsLost] = useState(false);
-  const [isWon, setIsWon] = useState(false);
+  const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}))
+  const [flags, setFlags] = useState<number>(boardMines)
+  const [startTime, setStartTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [isLost, setIsLost] = useState(false)
+  const [isWon, setIsWon] = useState(false)
 
   const startGame = () => {
-    setBoard(generateBoard(boardWidth, boardHeight, boardMines));
-    setFlags(boardMines);
-    setIsWon(false);
-    setIsLost(false);
-    setStartTime(new Date());
+    setBoard(generateBoard(boardWidth, boardHeight, boardMines))
+    setFlags(boardMines)
+    setIsWon(false)
+    setIsLost(false)
+    setStartTime(new Date())
   }
 
-  useEffect(() => {startGame()}, []);
+  useEffect(() => {startGame()}, [])
 
   return (
     <>
