@@ -1,124 +1,255 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import { shuffle } from 'lodash';
+import { MouseEvent, useEffect, useState } from 'react'
+import { Montserrat } from 'next/font/google'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-const inter = Inter({ subsets: ['latin'] })
+const montserrat = Montserrat({ subsets: ['latin'] })
 
 export default function Home() {
+
+  enum Visibility {
+    Covered,
+    Flag,
+    Revealed
+  }  
+
+  interface Tile {
+    value: number,
+    visibility: Visibility
+  }
+
+  function countAdjacent(board : number[], index : number, width : number, height : number) : number {
+    let count = 0;
+    let x = index % width;
+    let y = Math.floor(index / width);
+    let adjacent = [
+      [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
+      [x - 1, y], [x + 1, y],
+      [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
+    ];
+    adjacent.forEach(([x, y]) => {
+      if (x >= 0 && x < width && y >= 0 && y < height) {
+        if (board[x + y * width] === -1) {
+          count++;
+        }
+      }
+    });
+    return count;
+  }
+
+  function generateBoard(width : number, height : number, mines : number): Tile[] {
+    let board : number[] = Array(width * height).fill(0);
+    board.fill(-1, 0, mines);
+    board = shuffle(board);
+    board.forEach((value, index) => (value !== -1) && (board[index] = countAdjacent(board, index, width, height)));
+    return board.map((tile, _) => {return {value: tile, visibility: Visibility.Covered};});
+  }
+
+  const textColorLookup : {[key: number]: string} = {
+    "-1": "text-white",
+    "0": "text-white",
+    "1": "text-blue-500",
+    "2": "text-green-500",
+    "3": "text-red-500",
+    "4": "text-purple-500",
+    "5": "text-yellow-500",
+    "6": "text-pink-500",
+    "7": "text-gray-500",
+    "8": "text-black",
+  };
+
+  const bgColorLookup : {[key : number]: string} = {
+    [Visibility.Flag]: "bg-red-300",
+    [Visibility.Revealed]: "bg-slate-100",
+    [Visibility.Covered]: "bg-slate-200",
+  };
+
+  const hoverBgColorLookup : {[key : number]: string} = {
+    [Visibility.Flag]: "bg-red-300",
+    [Visibility.Revealed]: "bg-slate-100",
+    [Visibility.Covered]: "bg-slate-100",
+  };
+
+  const displayTile = (tile: Tile) => {
+    switch(tile.visibility) {
+      case Visibility.Covered:
+        return '';
+      case Visibility.Flag:
+        return "🚩";
+      case Visibility.Revealed:
+        return tile.value === -1 ? "💣" : (tile.value === 0 ? "" : tile.value);
+    }
+  }
+
+  const revealUnflaggedMines = (board: Tile[]) => {
+
+    let newBoard = [...board];
+
+    newBoard.forEach((tile, _) => { 
+      if(tile.value === -1 && tile.visibility !== Visibility.Flag)
+        tile.visibility = Visibility.Revealed; 
+    });
+
+    setBoard(newBoard);
+  }
+
+  const revealTile = (board: Tile[], index: number) => {
+    if (isWon || isLost) return;
+
+    const tile = board[index];
+    const value = tile.value;
+    const visibility = tile.visibility;
+
+    if (visibility !== Visibility.Covered) return;
+
+    let newBoard = [...board];
+    newBoard[index].visibility = Visibility.Revealed;
+    setBoard(newBoard);
+
+    if (!isLost && !isWon && value === -1) 
+    {
+      revealUnflaggedMines(board);
+      setIsLost(true);
+      console.log("You lose!");
+      return;
+    }
+    else if (value === 0) 
+    {
+      let [x, y] = [index % boardWidth, Math.floor(index / boardWidth)];
+
+      let adjacent = [
+        [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
+        [x - 1, y], [x + 1, y],
+        [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
+      ];
+
+      adjacent.forEach(([x, y]) => {
+        let inBounds = x >= 0 && x < boardWidth && y >= 0 && y < boardHeight;
+        if (inBounds)
+        {
+          let revealed = board[x + y * boardWidth].visibility === Visibility.Revealed;
+          if(!revealed)
+            revealTile(board, x + y * boardWidth);
+        }
+      });
+    }
+
+    console.log(board.filter((tile) => tile.visibility === Visibility.Covered).length);
+    if(!isLost && !isWon && board.filter((tile) => tile.visibility !== Visibility.Revealed).length === boardMines)
+    {
+      console.log("You win!");
+      setIsWon(true);
+    } 
+  }
+
+  function toggleFlag(event: React.MouseEvent, tile: Tile, index: number) {
+    if (isWon || isLost) return;
+
+    event.preventDefault();
+
+    if(tile.visibility === Visibility.Revealed || isWon || isLost) return;
+
+    let newBoard = [...board];
+
+    if(newBoard[index].visibility === Visibility.Flag) {
+      newBoard[index].visibility = Visibility.Covered;
+      setFlags(flags + 1);
+    }
+
+    else if(newBoard[index].visibility === Visibility.Covered) {
+      if(flags === 0) return;
+      newBoard[index].visibility = Visibility.Flag;
+      setFlags(flags - 1);
+    }
+
+    setBoard(newBoard);
+  }
+
+  function displayTime(start : Date) {
+    let now = new Date();
+    const h = (now.getHours() - start.getHours()).toString().padStart(2, '0');
+    const m = (now.getMinutes() - start.getMinutes()).toString().padStart(2, '0');
+    const s = (now.getSeconds() - start.getSeconds()).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  const boardWidth = 10;
+  const boardHeight = 10;
+  const boardMines = 2;
+
+  const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}));
+  const [flags, setFlags] = useState<number>(boardMines);
+  const [startTime, setStartTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isLost, setIsLost] = useState(false);
+  const [isWon, setIsWon] = useState(false);
+
+  const startGame = () => {
+    setBoard(generateBoard(boardWidth, boardHeight, boardMines));
+    setFlags(boardMines);
+    setIsWon(false);
+    setIsLost(false);
+    setStartTime(new Date());
+  }
+
+  useEffect(() => {startGame()}, []);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <div className="flex flex-col justify-between h-screen">
+        <div className="flex bg-gradient-to-b from-gray-300 to-gray-200 justify-center self-start w-screen">
+          <h1 className=
+            {
+              `font-bold py-4 text-4xl 
+              bg-gradient-to-r from-yellow-500 to-orange-500
+              bg-clip-text text-transparent`
+            }
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            Minesweeper
+          </h1>
         </div>
+        <main className={`${montserrat.className} bg-gray-200 flex justify-center items-center flex-col flex-grow`}>
+          <section 
+          className={`grid grid-cols-10 gap-0 bg-gray-200 rounded-xl shadow-lg opacity-90 ${(isWon || isLost) && 'blur-sm'}`} 
+          onContextMenu={(event) => event.preventDefault()}>
+            {
+              board.map((tile, index) => (
+                <button key={index} 
+                  onContextMenu={(event) => toggleFlag(event, tile, index)} 
+                  onClick={() => revealTile(board, index)} 
+                  className=
+                  {
+                    `w-12 h-12 
+                    ${bgColorLookup[tile.visibility]} 
+                    hover:${hoverBgColorLookup[tile.visibility]} 
+                    text-4xl font-bold rounded-md 
+                    ${textColorLookup[tile.value]} z-10`
+                  }
+                >
+                  {displayTile(tile)}
+                </button>))
+            }
+          </section>
+          <div className="font-bold pointer-events-none absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center text-4xl">
+            {(isWon && 'You won!') || (isLost && 'You lost!')}
+          </div>
+          <section className={`flex-row justify-between items-center relative w-96`}>
+            <div className="flex flex-col absolute left-0">
+              <div className="text-xl my-2"> ⏰ {displayTime(startTime)} </div>
+              <div className="text-xl my-2"> 🚩 {flags} </div>
+            </div>
+            <button onClick={startGame} className="text-white bg-orange-500 rounded-md px-4 py-2 my-4 absolute right-0">
+              New game
+            </button>
+          </section>
+        </main>
+        <footer className="text-neutral-500 py-4 bg-gradient-to-t from-gray-300 to-gray-200 flex justify-center">
+          Copyright &copy; Arnas Vaicekauskas 2023&nbsp;|&nbsp;
+          <a href="https://www.github.com/ArnasVaic">
+            <FontAwesomeIcon icon={['fab', 'github']} /> Github
+          </a>
+        </footer>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </>
   )
 }
