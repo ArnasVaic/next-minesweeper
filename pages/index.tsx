@@ -1,7 +1,8 @@
 import { shuffle } from 'lodash';
-import { MouseEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Montserrat } from 'next/font/google'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { HeadComponent as Head } from '../components/Head'
 
 const montserrat = Montserrat({ subsets: ['latin'] })
 
@@ -206,6 +207,7 @@ export default function Home() {
 
   return (
     <>
+      <Head/>
       <div className="flex flex-col justify-between h-screen">
         <div className="flex bg-gradient-to-b from-gray-300 to-gray-200 justify-center self-start w-screen">
           <h1 className=
