@@ -225,6 +225,7 @@ export default function Home() {
           </h1>
         </div>
         <main className={`${montserrat.className} bg-gray-200 flex justify-center items-center flex-col flex-grow`}>
+          <p className="flex justify-center m-4">Use left click to reveal tiles and right click to flag</p>
           <section 
           className={`grid grid-cols-12 gap-0 bg-gray-200 rounded-xl shadow-lg opacity-90 ${(isWon || isLost) && 'blur-sm'}`} 
           onContextMenu={(event) => event.preventDefault()}>
