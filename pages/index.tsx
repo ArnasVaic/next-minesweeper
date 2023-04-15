@@ -259,7 +259,7 @@ export default function Home() {
         </main>
         <footer className="text-neutral-500 py-4 bg-gradient-to-t from-gray-300 to-gray-200 flex justify-center">
           Copyright &copy; Arnas Vaicekauskas 2023&nbsp;|&nbsp;
-          <a href="https://www.github.com/ArnasVaic">
+          <a href="https://github.com/ArnasVaic/next-minesweeper">
             <FontAwesomeIcon icon={['fab', 'github']} /> Github
           </a>
         </footer>
