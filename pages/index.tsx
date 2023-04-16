@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Montserrat } from 'next/font/google'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { HeadComponent as Head } from '../components/Head'
-import { Game, GameStatus, Tile, Visibility, createGame, revealTile, toggleFlag } from './_minesweeper'
+import { Game, GameStatus, Tile, Visibility, createGame, revealTile, toggleFlag } from '../lib/_minesweeper'
 
 const montserrat = Montserrat({ subsets: ['latin'] })
 
