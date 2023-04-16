@@ -1,270 +1,123 @@
-import { shuffle } from 'lodash';
 import { useEffect, useState } from 'react'
 import { Montserrat } from 'next/font/google'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { HeadComponent as Head } from '../components/Head'
+import { Game, GameStatus, Tile, Visibility, createGame, revealTile, toggleFlag } from '../lib/_minesweeper'
 
 const montserrat = Montserrat({ subsets: ['latin'] })
 
+const overlayMessage = {
+  [GameStatus.Lost]: 'You lost! ☠️',
+  [GameStatus.Won]: 'You won! 🥳',
+  [GameStatus.Playing]: ''
+}
+
+const tileTextColor: {[key: number]: string} = {
+  "-1": "text-white",
+  "0": "text-white",
+  "1": "text-blue-500",
+  "2": "text-green-500",
+  "3": "text-red-500",
+  "4": "text-purple-500",
+  "5": "text-yellow-500",
+  "6": "text-pink-500",
+  "7": "text-gray-500",
+  "8": "text-black",
+}
+
+const tileBgColor : {[key : number]: string} = {
+  [Visibility.Flag]: "bg-red-300",
+  [Visibility.Revealed]: "bg-gray-100",
+  [Visibility.Covered]: "bg-gray-300",
+}
+
+const tileHoverBgColor : {[key : number]: string} = {
+  [Visibility.Flag]: "hover:bg-red-400",
+  [Visibility.Revealed]: "hover:bg-white",
+  [Visibility.Covered]: "hover:bg-white",
+}
+
+function tileDisplaySymbol(tile: Tile) {
+  if(tile.visibility === Visibility.Covered || tile.value === 0) return ''
+  if(tile.visibility === Visibility.Flag) return '🚩'
+  if(tile.value === -1) return '💣'
+  return `${tile.value}`
+}
+
+function displayTime(time : Date) {
+  const h = time.getUTCHours().toString().padStart(2, '0')
+  const m = time.getUTCMinutes().toString().padStart(2, '0')
+  const s = time.getUTCSeconds().toString().padStart(2, '0')
+  return `${h}:${m}:${s}`
+}
+
 export default function Home() {
-
-  enum Visibility {
-    Covered,
-    Flag,
-    Revealed
-  }
-
-  enum GameStatus {
-    Playing,
-    Won,
-    Lost
-  }
-
-  interface Tile {
-    value: number,
-    visibility: Visibility
-  }
-
-  function countAdjacent(board : number[], index : number, width : number, height : number) : number {
-    
-    let count = 0
-    let x = index % width
-    let y = Math.floor(index / width)
-
-    let adjacent = [
-      [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
-      [x - 1, y], [x + 1, y],
-      [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-    ]
-
-    adjacent.forEach(([x, y]) => {
-      if (x >= 0 && x < width && y >= 0 && y < height) {
-        if (board[x + y * width] === -1) {
-          count++
-        }
-      }
-    })
-
-    return count
-  }
-
-  function generateBoard(width : number, height : number, mines : number): Tile[] {
-    let board : number[] = Array(width * height).fill(0)
-    board.fill(-1, 0, mines)
-    board = shuffle(board)
-    board.forEach((value, index) => (value !== -1) && (board[index] = countAdjacent(board, index, width, height)))
-    return board.map((tile, _) => {return {value: tile, visibility: Visibility.Covered}})
-  }
-
-  const textColorLookup : {[key: number]: string} = {
-    "-1": "text-white",
-    "0": "text-white",
-    "1": "text-blue-500",
-    "2": "text-green-500",
-    "3": "text-red-500",
-    "4": "text-purple-500",
-    "5": "text-yellow-500",
-    "6": "text-pink-500",
-    "7": "text-gray-500",
-    "8": "text-black",
-  }
-
-  const bgColorLookup : {[key : number]: string} = {
-    [Visibility.Flag]: "bg-red-300",
-    [Visibility.Revealed]: "bg-slate-100",
-    [Visibility.Covered]: "bg-slate-200",
-  }
-
-  const hoverBgColorLookup : {[key : number]: string} = {
-    [Visibility.Flag]: "bg-red-300",
-    [Visibility.Revealed]: "bg-slate-100",
-    [Visibility.Covered]: "bg-slate-100",
-  }
-
-  const displayTile = (tile: Tile) => {
-    switch(tile.visibility) {
-      case Visibility.Covered:
-        return ''
-      case Visibility.Flag:
-        return "🚩"
-      case Visibility.Revealed:
-        return tile.value === -1 ? "💣" : (tile.value === 0 ? "" : tile.value)
-    }
-  }
-
-  const revealUnflaggedMines = (board: Tile[]) => {
-
-    let newBoard = [...board]
-
-    newBoard.forEach((tile, _) => { 
-      if(tile.value === -1 && tile.visibility !== Visibility.Flag)
-        tile.visibility = Visibility.Revealed
-    })
-
-    setBoard(newBoard)
-  }
-
-  const revealTile = (board: Tile[], index: number) => {
-    if (isWon || isLost) return
-
-    const tile = board[index]
-    const value = tile.value
-    const visibility = tile.visibility
-
-    if (visibility !== Visibility.Covered) return
-
-    let newBoard = [...board]
-    newBoard[index].visibility = Visibility.Revealed
-    setBoard(newBoard)
-
-    if (!isLost && !isWon && value === -1) 
-    {
-      revealUnflaggedMines(board)
-      setIsLost(true)
-      console.log("You lose!")
-      return
-    }
-    else if (value === 0) 
-    {
-      let [x, y] = [index % boardWidth, Math.floor(index / boardWidth)]
-
-      let adjacent = [
-        [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
-        [x - 1, y], [x + 1, y],
-        [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]
-      ]
-
-      adjacent.forEach(([x, y]) => {
-        let inBounds = x >= 0 && x < boardWidth && y >= 0 && y < boardHeight;
-        if (inBounds)
-        {
-          let revealed = board[x + y * boardWidth].visibility === Visibility.Revealed
-          if(!revealed)
-            revealTile(board, x + y * boardWidth)
-        }
-      })
-    }
-
-    console.log(board.filter((tile) => tile.visibility === Visibility.Covered).length)
-    if(!isLost && !isWon && board.filter((tile) => tile.visibility !== Visibility.Revealed).length === boardMines)
-    {
-      console.log("You win!")
-      setIsWon(true)
-    } 
-  }
-
-  function toggleFlag(event: React.MouseEvent, tile: Tile, index: number) {
-    if (isWon || isLost) return
-
-    event.preventDefault()
-
-    if(tile.visibility === Visibility.Revealed || isWon || isLost) return;
-
-    let newBoard = [...board]
-
-    if(newBoard[index].visibility === Visibility.Flag) {
-      newBoard[index].visibility = Visibility.Covered;
-      setFlags(flags + 1)
-    }
-
-    else if(newBoard[index].visibility === Visibility.Covered) {
-      if(flags === 0) return
-      newBoard[index].visibility = Visibility.Flag;
-      setFlags(flags - 1)
-    }
-
-    setBoard(newBoard)
-  }
-
-  function displayTime(time : Date) {
-    const h = time.getUTCHours().toString().padStart(2, '0')
-    const m = time.getUTCMinutes().toString().padStart(2, '0')
-    const s = time.getUTCSeconds().toString().padStart(2, '0')
-    return `${h}:${m}:${s}`
-  }
-
   const boardWidth = 12
   const boardHeight = 12
   const boardMines = 30
 
-  const [board, setBoard] = useState<Tile[]>(Array(boardWidth * boardHeight).fill({value: 0, visibility: Visibility.Covered}))
-  const [flags, setFlags] = useState<number>(boardMines)
+  const [game, setGame] = useState(createGame(boardWidth, boardHeight, boardMines))
   const [time, setTime] = useState(new Date(0))
-  const [isLost, setIsLost] = useState(false)
-  const [isWon, setIsWon] = useState(false)
-
+  
   const startGame = () => {
-    setBoard(generateBoard(boardWidth, boardHeight, boardMines))
-    setFlags(boardMines)
-    setIsWon(false)
-    setIsLost(false)
+    setGame(createGame(boardWidth, boardHeight, boardMines))
     setTime(new Date(0))
   }
 
   useEffect(() => {startGame()}, [])
   useEffect(() => {
-    if(!isWon && !isLost) {
+    if(game.status === GameStatus.Playing) {
       const timer = setInterval(() => {setTime((prevTime) => new Date(prevTime.getTime() + 1000))}, 1000)
       return () => clearInterval(timer);
     }
-  }, [isWon, isLost]);
+  }, [game.status]);
+
+  const generateBoardElement = (game: Game) => {
+    return game.board.map((tile, index) => (
+      <button 
+      key={index} 
+      onContextMenu={(event) => {
+        event.preventDefault()
+        setGame(toggleFlag(game, index))
+      }} 
+      onClick={() => setGame(revealTile(game, index))} 
+      className={`grid-tile ${tileBgColor[tile.visibility]} ${tileHoverBgColor[tile.visibility]} ${tileTextColor[tile.value]}`}>
+        {tileDisplaySymbol(tile)}
+      </button>
+    ))
+  }
 
   return (
     <>
       <Head/>
-      <div className="flex flex-col justify-between h-screen">
-        <div className="flex bg-gradient-to-b from-gray-300 to-gray-200 justify-center self-start w-screen">
-          <h1 className=
-            {
-              `font-bold py-4 text-4xl 
-              bg-gradient-to-r from-yellow-500 to-orange-500
-              bg-clip-text text-transparent`
-            }
-          >
-            Minesweeper
-          </h1>
+        <div className='wrapper'>
+          <h1 className='heading'> Minesweeper </h1>
+
+          <main className={montserrat.className}>
+
+            <p className='help-text'>Use left click to reveal tiles and right click to flag</p>
+
+            <section 
+            className={`game-grid ${game.status !== GameStatus.Playing && 'blur-sm'}`} 
+            onContextMenu={(event) => event.preventDefault()}>
+              {generateBoardElement(game)}
+            </section>
+            {game.status !== GameStatus.Playing && <div className="game-overlay">{overlayMessage[game.status]}</div>}
+            <section className='buttons-section'>
+              <div className='label'>⏰{displayTime(time)}</div>
+              <button className='button' onClick={startGame}>New</button>
+              <div className='label'>🚩 {game.flags}</div>
+            </section>
+
+          </main>
+
+          <footer>
+            Copyright &copy; Arnas Vaicekauskas 2023&nbsp;|&nbsp;
+            <a href="https://github.com/ArnasVaic/next-minesweeper">
+              <FontAwesomeIcon icon={['fab', 'github']} /> Github
+            </a>
+          </footer>
         </div>
-        <main className={`${montserrat.className} bg-gray-200 flex justify-center items-center flex-col flex-grow`}>
-          <p className="flex justify-center m-4">Use left click to reveal tiles and right click to flag</p>
-          <section 
-          className={`grid grid-cols-12 gap-0 bg-gray-200 rounded-xl shadow-lg opacity-90 ${(isWon || isLost) && 'blur-sm'}`} 
-          onContextMenu={(event) => event.preventDefault()}>
-            {
-              board.map((tile, index) => (
-                <button key={index} 
-                  onContextMenu={(event) => toggleFlag(event, tile, index)} 
-                  onClick={() => revealTile(board, index)} 
-                  className=
-                  {
-                    `w-12 h-12 
-                    ${bgColorLookup[tile.visibility]} 
-                    hover:${hoverBgColorLookup[tile.visibility]} 
-                    text-4xl font-bold rounded-md 
-                    ${textColorLookup[tile.value]} z-10`
-                  }
-                >
-                  {displayTile(tile)}
-                </button>))
-            }
-          </section>
-          <div className="font-bold pointer-events-none absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center text-4xl">
-            {(isWon && 'You won!') || (isLost && 'You lost!')}
-          </div>
-          <section className={`flex flex-row justify-center items-center`}>
-            <div className="text-xl p-2 m-2 w-36 shadow-lg bg-slate-200 rounded-md">⏰ {displayTime(time)}</div>
-            <button className="text-white text-xl p-2 m-2 w-36 shadow-lg bg-orange-500 hover:bg-slate-200 hover:text-black rounded-md" onClick={startGame}>
-              New
-            </button>
-            <div className="text-xl p-2 w-36 m-2 shadow-lg bg-slate-200 rounded-md">🚩 {flags}</div>
-          </section>
-        </main>
-        <footer className="text-neutral-500 py-4 bg-gradient-to-t from-gray-300 to-gray-200 flex justify-center">
-          Copyright &copy; Arnas Vaicekauskas 2023&nbsp;|&nbsp;
-          <a href="https://github.com/ArnasVaic/next-minesweeper">
-            <FontAwesomeIcon icon={['fab', 'github']} /> Github
-          </a>
-        </footer>
-      </div>
     </>
   )
 }
