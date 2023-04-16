@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.wrapper {
+    @apply flex flex-col justify-between h-screen w-screen bg-gray-200
+}
+
+.button {
+    @apply text-white text-xl p-2 m-2 w-36 shadow-lg bg-orange-500 hover:bg-slate-200 hover:text-black rounded-md
+}
+
+.game-overlay {
+    @apply text-orange-500 font-bold pointer-events-none absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center text-4xl z-10
+}
+
+.game-grid {
+    @apply flex items-center bg-gray-300 grid grid-cols-12 gap-0.5 min-w-max rounded-xl shadow-lg
+}
+
+.help-text {
+    @apply flex justify-center m-4
+}
+
+.grid-tile {
+    @apply w-12 h-12 text-4xl font-bold rounded-md z-10
+}
+
+.buttons-section {
+    @apply flex flex-row justify-center items-center
+}
+
+main {
+    @apply flex items-center flex-col flex-grow
+}
+
+.heading {
+    @apply flex flex-grow justify-center items-start self-start w-fit mx-auto font-bold py-4 text-4xl bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent;
+}
+
+.label {
+    @apply text-xl p-2 w-36 m-2 shadow-lg bg-gray-100 rounded-md
+}
+
+footer {
+    @apply flex flex-grow justify-center items-end p-2
+}
